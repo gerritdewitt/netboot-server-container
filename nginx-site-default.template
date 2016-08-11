@@ -1,0 +1,7 @@
+server {
+	listen 80;
+	server_name __%PLACEHOLDER_SERVER_HOSTNAME%__;
+	location / {
+		root __%PLACEHOLDER_NETBOOT_SP%__;
+	}
+}

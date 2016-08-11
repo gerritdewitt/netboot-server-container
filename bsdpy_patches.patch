@@ -1,0 +1,177 @@
+--- bsdpy/bsdpserver.py	2016-07-27 11:18:57.000000000 -0400
++++ bsdpserver.py	2016-07-27 11:13:10.000000000 -0400
+@@ -55,12 +55,14 @@
+ #   or upstart this should not be an issue.
+ #
+ 
++import sys, os
++
+ from pydhcplib.dhcp_packet import *
+ from pydhcplib.dhcp_network import *
+ from urlparse import urlparse
+ 
+ import socket, struct, fcntl
+-import os, fnmatch
++import fnmatch
+ import plistlib
+ import logging, optparse
+ import signal, errno
+@@ -284,7 +286,17 @@
+     nbisources = []
+     try:
+         for path, dirs, files in os.walk(incoming):
+-            # Create an empty dict that will hold an NBI's settings
++            # Create dict with NBI attributes:
++            #   booter = The kernel which is loaded with tftp
++            #   disabledsysids = System IDs to blacklist, optional
++            #   dmg = The actual OS image loaded after the booter
++            #   enabledsysids = System IDs to whitelist, optional
++            #   enabledmacaddrs = Enabled MAC addresses to whitelist, optional
++            #                     (and for which a key may not exist in)
++            #   id = The NBI Identifier, must be unique
++            #   isdefault = Indicates the NBI is the default
++            #   length = Length of the NBI name, needed for BSDP packet
++            #   name = The name of the NBI
+             thisnbi = {}
+             if os.path.splitext(path)[1] == '.nbi':
+                 del dirs[:]
+@@ -293,57 +305,91 @@
+                 logging.debug('Considering NBI source at ' + str(path))
+                 nbimageinfoplist = find('NBImageInfo.plist', path)[0]
+                 nbimageinfo = plistlib.readPlist(nbimageinfoplist)
+-
+-                # Pull NBI settings out of the plist for use later on:
+-                #   booter = The kernel which is loaded with tftp
+-                #   disabledsysids = System IDs to blacklist, optional
+-                #   dmg = The actual OS image loaded after the booter
+-                #   enabledsysids = System IDs to whitelist, optional
+-                #   enabledmacaddrs = Enabled MAC addresses to whitelist, optional
+-                #                     (and for which a key may not exist in)
+-                #   id = The NBI Identifier, must be unique
+-                #   isdefault = Indicates the NBI is the default
+-                #   length = Length of the NBI name, needed for BSDP packet
+-                #   name = The name of the NBI
+-
+-                if nbimageinfo['Index'] == 0:
+-                    logging.debug('Image "%s" Index is NULL (0), skipping!'
+-                                    % nbimageinfo['Name'])
++                
++                # gdewitt@gsu.edu: Adding error handling to catch uncaught KeyErrors:
++                try:
++                    thisnbi['name'] = nbimageinfo['Name']
++                except KeyError:
++                    thisnbi['name'] = "Invalid Name"
++                thisnbi['length'] = len(thisnbi['name'])
++                try:
++                    thisnbi['id'] = nbimageinfo['Index']
++                except KeyError:
++                    thisnbi['id'] = None
++                try:
++                    nbi_enabled = nbimageinfo['IsEnabled']
++                except KeyError:
++                    nbi_enabled = False # assume false
++                # Skip disabled NBIs:
++                if not nbi_enabled:
++                    logging.debug('Image "%s" is disabled, skipping.' % thisnbi['name'])
+                     continue
+-                elif nbimageinfo['IsEnabled'] is False:
+-                    logging.debug('Image "%s" is disabled, skipping.'
+-                                    % nbimageinfo['Name'])
++                # Skip null or zero ID NBIs:
++                if (not thisnbi['id']) or (thisnbi['id'] == 0):
++                    logging.debug('Image "%s" Index is NULL or zero; skipping!' % thisnbi['name'])
+                     continue
+-                else:
+-                    thisnbi['id'] = nbimageinfo['Index']
+-
+-                thisnbi['booter'] = \
+-                    find('booter', path)[0]
+-                thisnbi['description'] = \
+-                    nbimageinfo['Description']
+-                thisnbi['disabledsysids'] = \
+-                    nbimageinfo['DisabledSystemIdentifiers']
+-                thisnbi['dmg'] = \
+-                    '/'.join(find('*.dmg', path)[0].split('/')[2:])
+-
+-                thisnbi['enabledmacaddrs'] = \
+-                    nbimageinfo.get('EnabledMACAddresses', [])
++                try:
++                    thisnbi['description'] = nbimageinfo['Description']
++                except KeyError:
++                    thisnbi['description'] = '' # empty string
++                try:
++                    thisnbi['enabledsysids'] = nbimageinfo['EnabledSystemIdentifiers']
++                except KeyError:
++                    thisnbi['enabledsysids'] = [] # empty array
++                try:
++                    thisnbi['disabledsysids'] = nbimageinfo['DisabledSystemIdentifiers']
++                except KeyError:
++                    thisnbi['disabledsysids'] = [] # empty array
++                try:
++                    thisnbi['enabledmacaddrs'] = nbimageinfo.get('EnabledMACAddresses', [])
++                except KeyError:
++                    thisnbi['enabledmacaddrs'] = [] # empty array
+                 # EnabledMACAddresses must be lower-case - Apple's tools create them
+-                # as such, but in case they aren't..
+-                thisnbi['enabledmacaddrs'] = [mac.lower() for mac in
+-                                              thisnbi['enabledmacaddrs']]
+-
+-                thisnbi['enabledsysids'] = \
+-                    nbimageinfo['EnabledSystemIdentifiers']
+-                thisnbi['isdefault'] = \
+-                    nbimageinfo['IsDefault']
+-                thisnbi['length'] = \
+-                    len(nbimageinfo['Name'])
+-                thisnbi['name'] = \
+-                    nbimageinfo['Name']
+-                thisnbi['proto'] = \
+-                    nbimageinfo['Type']
+-
++                # as such, but in case they aren't...
++                thisnbi['enabledmacaddrs'] = [mac.lower() for mac in thisnbi['enabledmacaddrs']]
++                try:
++                    thisnbi['proto'] = nbimageinfo['Type']
++                except KeyError:
++                    thisnbi['proto'] = 'http' # default to HTTP
++                try:
++                    thisnbi['isdefault'] = nbimageinfo['IsDefault']
++                except KeyError:
++                    thisnbi['isdefault'] = False # assume false
++                thisnbi['booter'] = None
++                try:
++                    thisnbi['booter'] = find(nbimageinfo['BootFile'], path)[0]
++                except KeyError:
++                    thisnbi['booter'] = find('booter', path)[0] # if no BootFile key, look for "booter"
++                if not thisnbi['booter']:
++                    logging.debug('Could not determine booter (BootFile) for %s!' % thisnbi['name'])
++                    continue
++                thisnbi['dmg'] = None
++                # Is there a RootPath key?
++                try:
++                    has_root_path = True
++                    root_path_base_name = nbimageinfo['RootPath'].replace('.dmg','').replace('.sparseimage','')
++                except KeyError:
++                    has_root_path = False
++                # First try the RootPath key, allowing for dmg/sparseimage types:
++                if has_root_path:
++                    for extension in ['.dmg','.sparseimage']:
++                        try:
++                            thisnbi['dmg'] = find("%(r)s.%(e)s" % {"r":root_path_base_name,"e":extension}, path)[0]
++                        except IndexError:
++                            pass
++                        if thisnbi['dmg']:
++                            break
++                else: # Next, resort to searching:
++                    for extension in ['.dmg','.sparseimage']:
++                        try:
++                            thisnbi['dmg'] = '/'.join(find('*.%s' % extension, path)[0].split('/')[2:])
++                        except IndexError:
++                            pass
++                        if thisnbi['dmg']:
++                            break
++                if not thisnbi['dmg']:
++                    logging.debug('Could not determine disk image for %s!' % thisnbi['name'])
++                    continue
+ 
+                 # Add the parameters for the current NBI to nbioptions
+                 nbioptions.append(thisnbi)
