@@ -8,7 +8,7 @@ Some of the details will be specific to a particular environment, but the overal
       * This is made worse by the fact that there's a very easy way to make Apple NetBoot work if you have Cisco equipment.  Simply open broadcast traffic between the clients and the NetBoot server with an IP Helper.  An IP Helper passes all traffic to the NetBoot server, so you don't have to know exactly what DHCP options are in play.
    * Some DHCP _client_ options are named similarly to _service_ options, which confuses various narratives.
    * The format of client option 43 is hex-encoded, and it's easy to make a mistake.
-   * The format of client option 17 uses a colon in a place where you'd expect to put a forward slash.
+   * The format of client option 17 is a bit unexpected when providing images via NFS.  For instance, there's a colon in a place where you'd expect to put a forward slash.
    
 Authors
 ----------
@@ -33,11 +33,11 @@ The simplest setup has clients and the NetBoot server are on the same subnet.  A
 Considering the single subnet case is conceptually useful, though: You can learn how the client and server interact. There are a couple of places online with good information describing this interaction<sup>1,2</sup>.
 
 From the firmware boot picker, the interaction is:
-1. The Mac client sends a DHCP INFORM *broadcast* to the network asking for a list of bootable sources.  Along with this information, it identifies its hardware.
-2. The NetBoot server responds with a unicast DHCP ACK containing a list of suitable sources, curated based on that hardware identification.
-3. On the Mac client, the firmware boot picker renders a list of icons for bootable sources.  Upon selecting a source:
-4. The Mac client sends another DHCP INFORM *broadcast* with its selection.
-5. The NetBoot server responds with a unicast DHCP ACK with information about where (TFTP) to download the booter and prelinked kernel (kernelcache), where (NFS or HTTP) the root filesystem is located, and other details necessary to start booting.
+   * The Mac client sends a DHCP INFORM *broadcast* to the network asking for a list of bootable sources.  Along with this information, it identifies its hardware.
+   * The NetBoot server responds with a unicast DHCP ACK containing a list of suitable sources, curated based on that hardware identification.
+   * On the Mac client, the firmware boot picker renders a list of icons for bootable sources.  Upon selecting a source:
+      * The Mac client sends another DHCP INFORM *broadcast* with its selection.
+      * The NetBoot server responds with a unicast DHCP ACK with information about where (TFTP) to download the booter and prelinked kernel (kernelcache), where (NFS or HTTP) the root filesystem is located, and other details necessary to start booting.
 
 Apple documentation refers to steps 1 and 2 as the &#8220;BSDP LIST&#8221; phase, and steps 4 and 5 as the &#8220;BSDP SELECT&#8221; step<sup>1</sup>.
 
@@ -61,12 +61,12 @@ The DHCP options necessary for Apple NetBoot were derived by consulting various 
 | _vendor-class-identifier_ | DHCP Client | 60 | According to Apple's documentation<sup>1</sup>, this option differentiates the NetBoot server's response DHCP ACK from others. | string:<br> _AAPLBSDPC_ <br>The observed behavior is somewhat inconsistent in certain models:<br><ul><li>Option 60 absent: Some clients will list the NetBoot server</li><li>Option 60 present, value &#8220;AAPLBSDPC&#8221;: server considered</li><li>Option 60 present, value not &#8220;AAPLBSDPC&#8221;: server ignored</li></ul>|
 | _vendor-encapsulated-options_ | DHCP Client | 43 | Holds Apple BSDP offer and response options, encoded per that specification<sup>1</sup>. | hex-encoded:<br>See Next Table |
 | _Boot File Name_ | DHCP Client | 67 | Path to the bootloader when connected to the server via TFTP.  Note that this starts with the “tftp root” of the server. | string:<br> _production.nbi/i386/booter_ |
-| _Root Path_ | DHCP Client | 17 | Specifically encoded &#8220;path&#8221; to the NFS or HTTP resource containing the disk image representing the OS X boot root. | string:<br> _nfs:10.1.2.3:/nfs/netboot-repo:production.nbi/NetInstall.dmg_ <br>Option 17 is defined to be a _directory_ containing boot materials.  Apple modifies this definition slightly because it uses it to point to _a file_, the boot root disk image.  Hence, there's a colon (:) used to separate the traditional &#8220;root path&#8221; (the NetBoot sharepoint) from the path to the NBI and dmg inside. <br>HTTP string example:<br> _http://10.1.2.3/production.nbi/NetInstall.dmg_|
+| _Root Path_ | DHCP Client | 17 | Specifically encoded &#8220;path&#8221; to the NFS or HTTP resource containing the disk image representing the OS X boot root. | string, NFS example:<br> _nfs:10.1.2.3:/nfs/netboot-repo:production.nbi/NetInstall.dmg_ <br>For NFS, Option 17 is defined to be a _directory_ containing boot materials.  Apple modifies this definition slightly because it uses it to point to _a file_, the boot root disk image.  Hence, there's a colon (:) used to separate the traditional &#8220;root path&#8221; (the NetBoot sharepoint) from the path to the NBI and dmg inside. <br>string, HTTP example:<br> _http://10.1.2.3/production.nbi/NetInstall.dmg_|
 | _Next Server_ | DHCP Service | N/A | IP address for the NetBoot server. | string:<br> _10.1.2.3_ <br>Note that the IP address of the server can also be encoded in _vendor-encapsulated-options_ as BSDP option 3 as demonstrated in the next table. |
 
 BSDP Options Encoded in DHCP Option 43
 ----------
-Apple's BSDP Options are encoded as a hex string per RFC 2132 and as documented by Apple<sup>1</sup>.
+BSDP Options are encoded as a hex string per RFC 2132 and as documented by Apple<sup>1</sup>.
 
 | *Segment in DHCP Option 43* | *BSDP Option* | *Length* | *Purpose* | *Example Value and Notes* |
 | --- | --- | --- | --- | --- |
