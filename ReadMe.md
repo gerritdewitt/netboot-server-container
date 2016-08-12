@@ -15,7 +15,6 @@ Installing
 1. Copy the package root tarball to the target server and expand it in a directory of your choosing.
 2. Run the _init-script.sh_ with the _install_ argument as root; for example:
 <pre>
-cd /parent/path
 tar -xvf netboot-server-container-2016.08.tgz
 sudo ./netboot-server-container/init-script.sh install
 </pre>
@@ -40,9 +39,11 @@ Authors & Sources
 1. Using BSDPy and NetBoot images
    * http://manu.agat.net/dotclear/index.php/post/2014/04/29/OSX%3A-what-is-Netboot-and-using-it-with-linux
 2. _nginx_
-   * Sharing from NFS Mounts: http://serverfault.com/questions/18578/apache-throwing-403-on-serving-images-from-an-nfs-share
+   * SELinux Considerations: http://serverfault.com/questions/18578/apache-throwing-403-on-serving-images-from-an-nfs-share
+   * SELinux Considerations: http://unix.stackexchange.com/questions/196907/proxy-nginx-shows-a-bad-gateway-error
    * Accepting Network Connections: http://unix.stackexchange.com/questions/196907/proxy-nginx-shows-a-bad-gateway-error
    * Signalling nginx: https://www.nginx.com/resources/wiki/start/topics/tutorials/commandline/
+   * http://www.itzgeek.com/how-tos/linux/centos-how-tos/install-nginx-on-centos-7-rhel-7.html
 3. Creating _init_ Scripts
    * http://www.tldp.org/HOWTO/HighQuality-Apps-HOWTO/boot.html
    * https://blog.hazrulnizam.com/create-init-script-centos-6/
@@ -64,6 +65,7 @@ Authors & Sources
    * http://serverfault.com/questions/529287/rsync-creates-a-directory-with-the-same-name-inside-of-destination-directory
    * https://virtualenv.pypa.io/en/stable/reference/
    * http://wiki.bash-hackers.org/howto/conffile
+   * https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Deployment_Guide/s2-services-chkconfig.html
 
 ### Software ###
 1. PyPy Runtime: Created by various authors
@@ -91,11 +93,14 @@ Authors & Sources
    * Dependency for pTFTPd: _netifaces_: Created by Alastair Houghton
       * https://pypi.python.org/pypi/netifaces and https://bitbucket.org/al45tair/netifaces
       * License: MIT, https://bitbucket.org/al45tair/netifaces
+4. nginx: Written and maintained by Igor Sysoev and Nginx, Inc.
+   * http://nginx.org/en/, http://nginx.org/packages/rhel/6/x86_64/RPMS/
+   * License: BSD, http://nginx.org/LICENSE
    
 Organization
 ----------
 Top level items in this repository are:
-* _build-script.sh_: A shell script that builds a “container” for deployment to a server.  It needs Internet access to download the various components, and it creates a customized _init-script.sh_ based on settings you specify (such as network interface and path to the NetBoot images).
+* _build-script.sh_: A shell script that builds a “container” for deployment to a server.  It needs Internet access to download the various components.
 * _init-script-template.sh_: A shell script that serves as a template for the _init-script.sh_ included in the container that's produced.
 * The _nginx-site-default.template_: Simple nginx config file copied into the container.
 * _bsdpy_patches.patch_: A few patches for bsdpy to handle uncaught KeyErrors.  Applied at build time to the _bsdpserver.py_ file.
