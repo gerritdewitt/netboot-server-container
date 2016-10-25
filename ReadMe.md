@@ -48,6 +48,7 @@ Authors & Sources
    * http://www.tldp.org/HOWTO/HighQuality-Apps-HOWTO/boot.html
    * https://blog.hazrulnizam.com/create-init-script-centos-6/
    * https://gist.github.com/TheMengzor/968e5ea87e99d9c41782
+   * https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Deployment_Guide/s2-services-chkconfig.html
 4. Extracting RPM Contents
    * http://blog.packagecloud.io/eng/2015/10/13/inspect-extract-contents-rpm-packages/
    * http://www.cyberciti.biz/tips/how-to-extract-an-rpm-package-without-installing-it.html
@@ -65,7 +66,8 @@ Authors & Sources
    * http://serverfault.com/questions/529287/rsync-creates-a-directory-with-the-same-name-inside-of-destination-directory
    * https://virtualenv.pypa.io/en/stable/reference/
    * http://wiki.bash-hackers.org/howto/conffile
-   * https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Deployment_Guide/s2-services-chkconfig.html
+   * http://unix.stackexchange.com/questions/74185/how-can-i-prevent-grep-from-showing-up-in-ps-results
+
 
 ### Software ###
 1. PyPy Runtime: Created by various authors
