@@ -6,7 +6,7 @@
 #  for hosting Apple NetBoot services.
 
 # Written by Gerrit DeWitt (gdewitt@gsu.edu)
-# gdewitt@gsu.edu, 2016-07-06, 2016-08-11.
+# gdewitt@gsu.edu, 2016-07-06, 2016-08-11, 2016-10-25.
 # Copyright Georgia State University.
 # This script uses publicly-documented methods known to those skilled in the art.
 # References: See top level Read Me.
@@ -31,8 +31,8 @@ declare -x PYPY_VENV_BIN="$PYPY_STAGING_DIR/bin/virtualenv-pypy"
 # nginx:
 declare -x NGINX_STAGING_DIR="$STAGING_DIR/expanded-nginx-rpm"
 declare -x NGINX_INSTALLED_DIR="$PACKAGE_ROOT_DIR/nginx"
-declare -x NGINX_SITE_CONF_FILE_TEMPLATE_PATH="$THIS_DIR/nginx-site-default.template"
-declare -x NGINX_SITE_CONF_FILE_INSTALLED_PATH="$NGINX_INSTALLED_DIR/etc/nginx/conf.d/default.conf"
+declare -x NGINX_SITE_CONF_FILE_TEMPLATE_SRC_PATH="$THIS_DIR/nginx-site-default.template"
+declare -x NGINX_SITE_CONF_FILE_TEMPLATE_DEST_PATH="$NGINX_INSTALLED_DIR/etc/nginx/conf.d/nginx-site-default.template"
 # bsdpy:
 declare -x BSDPY_STAGING_DIR="$STAGING_DIR/src-bsdpy"
 declare -x BSDPY_VENV_DIR="$PACKAGE_ROOT_DIR/bsdpy_virtualenv"
@@ -179,7 +179,7 @@ function download_and_extract_nginx(){
     cd "$old_pwd"
     mv "$NGINX_STAGING_DIR" "$NGINX_INSTALLED_DIR"
     log_and_print "Extracted nginx to: $NGINX_INSTALLED_DIR"
-    cp "$NGINX_SITE_CONF_FILE_TEMPLATE_PATH" "$NGINX_SITE_CONF_FILE_INSTALLED_PATH" && log_and_print "Copied nginx conf template to: $NGINX_SITE_CONF_FILE_INSTALLED_PATH"
+    cp "$NGINX_SITE_CONF_FILE_TEMPLATE_SRC_PATH" "$NGINX_SITE_CONF_FILE_TEMPLATE_DEST_PATH" && log_and_print "Copied nginx conf template to: $NGINX_SITE_CONF_FILE_TEMPLATE_DEST_PATH"
 }
 
 # MARK: download_and_extract_pypy()

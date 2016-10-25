@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # BSDPY-Server-Container Init Script.
-# gdewitt@gsu.edu, 2015-06-15, 2015-06-15, 2016-03-04, 2016-03-14, 2016-04-25, 2016-07-06, 2016-08-02, 2016-08-09.
+# gdewitt@gsu.edu, 2015-06-15, 2015-06-15, 2016-03-04, 2016-03-14, 2016-04-25, 2016-07-06, 2016-08-02, 2016-08-09, 2016-10-25.
 # to do: modify this script to work on distros besides RHEL
 
 # References: See top level Read Me.
@@ -36,6 +36,7 @@ declare -x PIDFILE_PTFTPD=""
 # nginx:
 declare -x NGINX_BIN=""
 declare -x NGINX_MAIN_CONF_FILE=""
+declare -x NGINX_SITE_CONF_FILE_TEMPLATE=""
 declare -x NGINX_SITE_CONF_FILE=""
 declare -a CMD_NGINX_START=()
 declare -a CMD_NGINX_STOP=()
@@ -103,11 +104,12 @@ function read_config() {
     # nginx:
     NGINX_BIN="$CONTAINER_DIR/__%NGINX_INSTALLED_DIR_BASENAME%__/usr/sbin/nginx"
     NGINX_MAIN_CONF_FILE="$CONTAINER_DIR/__%NGINX_INSTALLED_DIR_BASENAME%__/etc/nginx/nginx.conf"
+    NGINX_SITE_CONF_FILE_TEMPLATE="$CONTAINER_DIR/__%NGINX_INSTALLED_DIR_BASENAME%__/etc/nginx/conf.d/nginx-site-default.template"
     NGINX_SITE_CONF_FILE="$CONTAINER_DIR/__%NGINX_INSTALLED_DIR_BASENAME%__/etc/nginx/conf.d/default.conf"
     CMD_NGINX_START=("$NGINX_BIN" "-c" "$NGINX_MAIN_CONF_FILE") # start command
     CMD_NGINX_STOP=("$NGINX_BIN" "-s" "stop") # stop command
     # Arrays:
-    APP_FILES_ARRAY=("$PYTHON_FILE_BSDPY" "$PYTHON_FILE_PTFTPD" "$NGINX_BIN" "$NGINX_MAIN_CONF_FILE" "$NGINX_SITE_CONF_FILE")
+    APP_FILES_ARRAY=("$PYTHON_FILE_BSDPY" "$PYTHON_FILE_PTFTPD" "$NGINX_BIN" "$NGINX_MAIN_CONF_FILE" "$NGINX_SITE_CONF_FILE_TEMPLATE" "$NGINX_SITE_CONF_FILE")
     APP_CMDS_ARRAY=("CMD_BSDPY" "CMD_PTFTPD" "CMD_NGINX_START")
     APP_PIDFILES_ARRAY=("$PIDFILE_BSDPY" "$PIDFILE_PTFTPD")
 
@@ -254,7 +256,7 @@ function install() {
     echo "Updating nginx config ($NGINX_SITE_CONF_FILE):"
     echo "  - server name: $SERVER_HOSTNAME"
     echo "  - web root: $NETBOOT_SP"
-    conf_contents="$(cat $NGINX_SITE_CONF_FILE)"
+    conf_contents="$(cat $NGINX_SITE_CONF_FILE_TEMPLATE)"
     new_conf_contents="$(echo "$conf_contents" | sed "s|__%PLACEHOLDER_NETBOOT_SP%__|$NETBOOT_SP|g" | sed "s|__%PLACEHOLDER_SERVER_HOSTNAME%__|$SERVER_HOSTNAME|g")"
     echo "$new_conf_contents" > "$NGINX_SITE_CONF_FILE"
     # Start:
