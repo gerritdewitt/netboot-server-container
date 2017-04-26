@@ -281,7 +281,6 @@ function uninstall() {
     echo "Calling stop()..."
     stop
 
-    # chkconfig:
     echo "Running chkconfig..."
     /sbin/chkconfig --level 345 "$APP_NAME" off && echo "  App will NOT run on system boot."
 
